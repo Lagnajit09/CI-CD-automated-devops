@@ -14,6 +14,15 @@ interface CreateTodoBody {
   categoryId: string;
 }
 
+// Check if server and database are running
+router.get("/check", (_req: Request, res: Response) => {
+  const categoryount = prisma.category.count();
+  if (categoryount) {
+    console.log("categories count: ", categoryount);
+  }
+  res.send("Server and Database are running");
+});
+
 // Get all todos and categories
 router.get("/", async (_req: Request, res: Response) => {
   try {
