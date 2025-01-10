@@ -1,9 +1,9 @@
 "use client";
 
-import { useTodos } from './hooks/useTodos';
-import { TodoCard } from './components/TodoCard';
-import { AddTodoDialog } from './components/AddTodoDialog';
-import { Search } from 'lucide-react';
+import { useTodos } from "./hooks/useTodos";
+import { TodoCard } from "./components/TodoCard";
+import { AddTodoDialog } from "./components/AddTodoDialog";
+import { Search } from "lucide-react";
 
 export default function Home() {
   const { todos, categories, addTodo, toggleTodo, deleteTodo } = useTodos();
@@ -30,21 +30,27 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Tasks</h2>
             <div className="flex items-center gap-2">
-              <button className="text-sm text-gray-600 hover:text-gray-900">Today</button>
-              <button className="text-sm text-gray-600 hover:text-gray-900">This Week</button>
-              <button className="text-sm text-gray-600 hover:text-gray-900">This Month</button>
+              <button className="text-sm text-gray-600 hover:text-gray-900">
+                Today
+              </button>
+              <button className="text-sm text-gray-600 hover:text-gray-900">
+                This Week
+              </button>
+              <button className="text-sm text-gray-600 hover:text-gray-900">
+                This Month
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {todos.map((todo) => {
-              const category = categories.find((c) => c.id === todo.category);
+              const category = categories.find((c) => c.id === todo.categoryId);
               return (
                 <TodoCard
                   key={todo.id}
                   todo={todo}
                   onToggle={toggleTodo}
                   onDelete={deleteTodo}
-                  categoryColor={category?.color || 'bg-gray-100'}
+                  categoryColor={category?.color || "bg-gray-100"}
                 />
               );
             })}

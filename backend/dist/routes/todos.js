@@ -4,6 +4,13 @@ const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+router.get("/check", (_req, res) => {
+    const categoryount = prisma.category.count();
+    if (categoryount) {
+        console.log("categories count: ", categoryount);
+    }
+    res.send("Server and Database are running");
+});
 router.get("/", async (_req, res) => {
     try {
         const [todos, categories] = await Promise.all([
