@@ -15,12 +15,17 @@ interface CreateTodoBody {
 }
 
 // Check if server and database are running
-router.get("/check", (_req: Request, res: Response) => {
-  const categoryount = prisma.category.count();
-  if (categoryount) {
-    console.log("categories count: ", categoryount);
+router.get("/check", async (_req: Request, res: Response) => {
+  try {
+    const categoryount = await prisma.category.count();
+    if (categoryount) {
+      console.log("categories count: ", categoryount);
+      res.send("Server and Database are running");
+    }
+  } catch (error) {
+    console.log(error);
+    res.send("Server or Database is down");
   }
-  res.send("Server and Database are running");
 });
 
 // Get all todos and categories
@@ -37,6 +42,7 @@ router.get("/", async (_req: Request, res: Response) => {
 
     res.json({ todos, categories });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Failed to fetch todos and categories" });
   }
 });
@@ -60,6 +66,7 @@ router.post(
 
       res.status(201).json(todo);
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: "Failed to create todo" });
     }
   }
@@ -120,6 +127,7 @@ router.delete("/:id", async (req: Request<TodoParams>, res: Response) => {
 
     res.status(204).send();
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Failed to delete todo" });
   }
 });
