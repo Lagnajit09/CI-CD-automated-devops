@@ -19,7 +19,7 @@ export function TodoCard({
 }: TodoCardProps) {
   return (
     <div
-      className={`rounded-lg p-6 relative group transition-all hover:shadow-md ${categoryColor}`}
+      className={`${categoryColor} rounded-lg p-6 relative group transition-all hover:shadow-md border-2`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
