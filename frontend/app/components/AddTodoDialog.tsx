@@ -1,39 +1,56 @@
 "use client";
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Category } from '../types';
-import { Plus } from 'lucide-react';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Category } from "../types";
+import { Plus } from "lucide-react";
 
 interface AddTodoDialogProps {
   categories: Category[];
-  onAddTodo: (todo: { title: string; description: string; category: string; completed: boolean }) => void;
+  onAddTodo: (todo: {
+    title: string;
+    description: string;
+    categoryId: string;
+    completed: boolean;
+  }) => void;
 }
 
 export function AddTodoDialog({ categories, onAddTodo }: AddTodoDialogProps) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategory] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !category) return;
+    if (!title.trim() || !categoryId) return;
 
     onAddTodo({
       title,
       description,
-      category,
+      categoryId,
       completed: false,
     });
 
-    setTitle('');
-    setDescription('');
-    setCategory('');
+    setTitle("");
+    setDescription("");
+    setCategory("");
     setOpen(false);
   };
 
@@ -67,7 +84,7 @@ export function AddTodoDialog({ categories, onAddTodo }: AddTodoDialogProps) {
             />
           </div>
           <div>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select value={categoryId} onValueChange={setCategory} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
