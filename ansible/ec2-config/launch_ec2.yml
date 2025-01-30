@@ -1,0 +1,149 @@
+---
+- name: Setup VPC and Launch EC2 instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/aws_vars.yml
+
+  tasks:
+    # VPC Creation
+    - name: Create VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ vpc_cidr }}"
+        region: "{{ aws_region }}"
+        dns_hostnames: yes
+        dns_support: yes
+        tenancy: default
+        state: present
+        tags:
+          Environment: "{{ environment }}"
+          Project: "{{ project }}"
+      register: vpc
+
+    # Internet Gateway
+    - name: Create Internet Gateway
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-igw"
+          Environment: "{{ environment }}"
+      register: igw
+
+    # Public Subnet
+    - name: Create Public Subnet
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ public_subnet_cidr }}"
+        region: "{{ aws_region }}"
+        map_public: yes
+        tags:
+          Name: "{{ vpc_name }}-public-subnet"
+          Environment: "{{ environment }}"
+      register: public_subnet
+
+    # Private Subnet
+    - name: Create Private Subnet
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ private_subnet_cidr }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "{{ vpc_name }}-private-subnet"
+          Environment: "{{ environment }}"
+      register: private_subnet
+
+    # Route Table for Public Subnet
+    - name: Set up public subnet route table
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        tags:
+          Name: "{{ vpc_name }}-public-rt"
+          Environment: "{{ environment }}"
+        subnets:
+          - "{{ public_subnet.subnet.id }}"
+        routes:
+          - dest: "0.0.0.0/0"
+            gateway_id: "{{ igw.gateway_id }}"
+      register: public_route_table
+
+    # Security Group
+    - name: Create Security Group
+      amazon.aws.ec2_security_group:
+        name: "{{ vpc_name }}-sg"
+        description: Security group for EC2 instances
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            ports: 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow SSH
+          - proto: tcp
+            ports: 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow HTTP
+          - proto: tcp
+            ports: 443
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow HTTPS
+        tags:
+          Name: "{{ vpc_name }}-sg"
+          Environment: "{{ environment }}"
+      register: security_group
+
+    # EC2 Key Pair
+    - name: Create EC2 key pair
+      amazon.aws.ec2_key:
+        name: "{{ key_name }}"
+        region: "{{ aws_region }}"
+      register: key_pair
+
+    - name: Save private key
+      copy:
+        content: "{{ key_pair.key.private_key }}"
+        dest: "./{{ key_name }}.pem"
+        mode: '0600'
+      when: key_pair.changed
+
+    # Launch EC2 Instance
+    - name: Launch EC2 instance
+      amazon.aws.ec2_instance:
+        name: "{{ instance_name }}"
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image_id: "{{ ami_id }}"
+        region: "{{ aws_region }}"
+        vpc_subnet_id: "{{ public_subnet.subnet.id }}"
+        security_group: "{{ security_group.group_id }}"
+        network:
+          assign_public_ip: true
+        wait: yes
+        state: present
+        tags:
+          Name: "{{ instance_name }}"
+          Environment: "{{ environment }}"
+          Project: "{{ project }}"
+      register: ec2
+
+    # Save Instance Details
+    - name: Save instance connection details
+      copy:
+        content: |
+          VPC ID: {{ vpc.vpc.id }}
+          Public Subnet ID: {{ public_subnet.subnet.id }}
+          Private Subnet ID: {{ private_subnet.subnet.id }}
+          Security Group ID: {{ security_group.group_id }}
+          Instance ID: {{ ec2.instances[0].instance_id }}
+          Public IP: {{ ec2.instances[0].public_ip_address }}
+          Private IP: {{ ec2.instances[0].private_ip_address }}
+          Key file: {{ key_name }}.pem
+          SSH Command: ssh -i {{ key_name }}.pem ec2-user@{{ ec2.instances[0].public_ip_address }}
+        dest: "./instance_details.txt"
+        mode: '0644'

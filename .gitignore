@@ -1,2 +1,10 @@
 .env
+
+# KEY FILES
 todo-key
+my-ec2-key.pem
+
+
+# AWS CLI SETUP
+aws
+awscliv2.zip

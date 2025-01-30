@@ -1,8 +1,0 @@
----
-- name: Restart Services
-  systemd:
-    name: "{{ item }}"
-    state: restarted
-  loop:
-    - docker
-    - kubelet

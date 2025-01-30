@@ -1,0 +1,15 @@
+---
+aws_region: us-east-1
+# VPC Settings
+vpc_name: "my-ansible-vpc"
+vpc_cidr: "10.0.0.0/16"
+public_subnet_cidr: "10.0.1.0/24"
+private_subnet_cidr: "10.0.2.0/24"
+# EC2 Settings
+instance_type: t2.micro
+ami_id: ami-0c614dee691cbbf37
+key_name: my-ec2-key
+instance_name: my-ec2-instance
+# Tags
+environment: "Development"
+project: "Ansible-AWS"
