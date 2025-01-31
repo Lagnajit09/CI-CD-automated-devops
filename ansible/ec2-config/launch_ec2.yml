@@ -132,18 +132,19 @@
           Project: "{{ project }}"
       register: ec2
 
-    # Save Instance Details
-    - name: Save instance connection details
+    # Save Instance Details in YAML format
+    - name: Save instance details to vars file
       copy:
         content: |
-          VPC ID: {{ vpc.vpc.id }}
-          Public Subnet ID: {{ public_subnet.subnet.id }}
-          Private Subnet ID: {{ private_subnet.subnet.id }}
-          Security Group ID: {{ security_group.group_id }}
-          Instance ID: {{ ec2.instances[0].instance_id }}
-          Public IP: {{ ec2.instances[0].public_ip_address }}
-          Private IP: {{ ec2.instances[0].private_ip_address }}
-          Key file: {{ key_name }}.pem
-          SSH Command: ssh -i {{ key_name }}.pem ec2-user@{{ ec2.instances[0].public_ip_address }}
-        dest: "./instance_details.txt"
+          ---
+          vpc_id: "{{ vpc.vpc.id }}"
+          public_subnet_id: "{{ public_subnet.subnet.id }}"
+          private_subnet_id: "{{ private_subnet.subnet.id }}"
+          security_group_id: "{{ security_group.group_id }}"
+          instance_id: "{{ ec2.instances[0].instance_id }}"
+          public_ip: "{{ ec2.instances[0].public_ip_address }}"
+          private_ip: "{{ ec2.instances[0].private_ip_address }}"
+          key_file: "{{ key_name }}.pem"
+          ssh_command: "ssh -i {{ key_name }}.pem ubuntu@{{ ec2.instances[0].public_ip_address }}"
+        dest: "./vars/instance_details.yml"
         mode: '0644'

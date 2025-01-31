@@ -1,0 +1,146 @@
+---
+- name: Configure Docker and Kubernetes
+  hosts: k8s_master
+  become: yes
+  vars:
+    kubernetes_version: v1.32
+    docker_keyring_path: /etc/apt/keyrings/docker.gpg
+    k8s_keyring_path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+  tasks:
+    - name: Update apt package index
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    # Docker Installation
+    - name: Download Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /tmp/docker.gpg
+        mode: '0644'
+
+    - name: Dearmor Docker GPG key
+      shell: gpg --dearmor -o "{{ docker_keyring_path }}" /tmp/docker.gpg
+      args:
+        creates: "{{ docker_keyring_path }}"
+
+    - name: Set up Docker repository
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by={{ docker_keyring_path }}] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    # Kubernetes Repository Setup
+    - name: Download Kubernetes repository key
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key
+        dest: /tmp/kubernetes.key
+        mode: '0644'
+
+    - name: Dearmor Kubernetes GPG key
+      shell: gpg --dearmor -o "{{ k8s_keyring_path }}" /tmp/kubernetes.key
+      args:
+        creates: "{{ k8s_keyring_path }}"
+
+    - name: Set up Kubernetes repository
+      shell: |
+        echo 'deb [signed-by={{ k8s_keyring_path }}] https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+      args:
+        creates: /etc/apt/sources.list.d/kubernetes.list
+
+    # Install Docker
+    - name: Update apt package index again
+      apt:
+        update_cache: yes
+
+    - name: Install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Create docker daemon configuration directory
+      file:
+        path: /etc/docker
+        state: directory
+
+    - name: Configure Docker daemon
+      copy:
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m"
+            },
+            "storage-driver": "overlay2"
+          }
+        dest: /etc/docker/daemon.json
+
+    - name: Ensure docker service is enabled and started
+      systemd:
+        name: docker
+        enabled: yes
+        state: restarted
+
+    # Install Kubernetes components
+    - name: Install Kubernetes packages
+      apt:
+        name:
+          - kubectl
+          - kubeadm
+          - kubelet
+        state: present
+
+    - name: Hold Kubernetes packages
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubectl
+        - kubeadm
+        - kubelet
+
+    - name: Ensure kubelet service is enabled
+      systemd:
+        name: kubelet
+        enabled: yes
+
+    # Optional: Post-installation cleanup
+    - name: Clean up temporary files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/docker.gpg
+        - /tmp/kubernetes.key
+
+  handlers:
+    - name: Restart Docker
+      systemd:
+        name: docker
+        state: restarted
+
+    - name: Restart Kubelet
+      systemd:
+        name: kubelet
+        state: restarted

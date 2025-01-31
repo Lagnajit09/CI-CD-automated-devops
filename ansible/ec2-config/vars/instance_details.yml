@@ -1,0 +1,10 @@
+---
+vpc_id: "vpc-05499ae071c5a47c2"
+public_subnet_id: "subnet-0bb858d300a6b579e"
+private_subnet_id: "subnet-0bdeac4049b1d11b3"
+security_group_id: "sg-07aeb3ff392124bbc"
+instance_id: "i-05bcb9ca9f41486a6"
+public_ip: "34.207.58.105"
+private_ip: "10.0.1.176"
+key_file: "my-ec2-key.pem"
+ssh_command: "ssh -i my-ec2-key.pem ubuntu@34.207.58.105"

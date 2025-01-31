@@ -1,9 +1,0 @@
-VPC ID: vpc-05499ae071c5a47c2
-Public Subnet ID: subnet-0bb858d300a6b579e
-Private Subnet ID: subnet-0bdeac4049b1d11b3
-Security Group ID: sg-03ec073bd38faf4a1
-Instance ID: i-00c72924b850e6de2
-Public IP: 54.90.43.73
-Private IP: 10.0.1.206
-Key file: my-ec2-key.pem
-SSH Command: ssh -i my-ec2-key.pem ec2-user@54.90.43.73

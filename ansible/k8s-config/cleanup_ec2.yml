@@ -1,0 +1,66 @@
+- name: Clean up VM 
+  hosts: k8s_master
+  become: yes
+  tasks:
+    - name: Stop and disable Kubernetes services
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - kubelet
+        - docker
+        - containerd
+      ignore_errors: yes
+
+    - name: Uninstall Kubernetes packages
+      apt:
+        name: 
+          - kubectl
+          - kubeadm
+          - kubelet
+        state: absent
+        purge: yes
+
+    - name: Uninstall Docker packages
+      apt:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: absent
+        purge: yes
+
+    - name: Remove Docker and Kubernetes configuration directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/docker
+        - /etc/kubernetes
+        - /var/lib/docker
+        - /var/lib/kubelet
+        - /var/lib/containerd
+        - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        - /etc/apt/sources.list.d/kubernetes.list
+        - /etc/apt/sources.list.d/docker.list
+
+    - name: Clean up APT package cache
+      apt:
+        autoclean: yes
+        autoremove: yes
+
+    - name: Remove user from docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        state: absent
+
+    - name: Final system cleanup
+      shell: |
+        apt-get clean
+        rm -rf /var/cache/apt/archives/*
+      args:
+        warn: no
