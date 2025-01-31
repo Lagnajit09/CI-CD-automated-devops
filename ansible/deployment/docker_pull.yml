@@ -1,0 +1,32 @@
+- name: Pull Docker images from Docker Hub
+  hosts: k8s_master
+  become: yes
+  tasks:
+
+    - name: Ensure Docker is installed and running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Login to Docker Hub (if required)
+      docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+      when: dockerhub_username is defined and dockerhub_password is defined
+
+    - name: Pull Docker images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - lmdev09/cicd-todo-fe:latest
+        - lmdev09/cicd-todo-be:latest
+    
+    - name: Verify pulled images
+      command: docker images
+      register: docker_images
+
+    - debug:
+        msg: "{{ docker_images.stdout_lines }}"
+
