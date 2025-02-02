@@ -1,0 +1,26 @@
+- name: Reset EC2 instance and configure SSH key
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ./vars/instance_details.yml
+  tasks:
+    - name: Terminate existing EC2 instance
+      amazon.aws.ec2_instance:
+        state: absent
+        instance_ids:
+          - "{{ instance_id }}" 
+      register: termination_result
+
+    - name: Wait for termination
+      pause:
+        seconds: 15  # Adjust as needed
+
+    - name: Launch a new EC2 instance
+      command: ansible-playbook -i ../inventory/inventory.ini launch_ec2.yml
+
+    - name: Fetch new key from ec2-config
+      copy:
+        src: "./{{ key_file }}"
+        dest: "~/{{ key_file }}"
+        mode: '0600'
+

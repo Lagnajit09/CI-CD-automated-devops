@@ -132,6 +132,11 @@
           Project: "{{ project }}"
       register: ec2
 
+    # Print EC2
+    - name: Print EC2 Instance Details
+      debug:
+        var: ec2
+
     # Save Instance Details in YAML format
     - name: Save instance details to vars file
       copy:
