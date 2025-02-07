@@ -8,6 +8,8 @@ import { Search } from "lucide-react";
 export default function Home() {
   const { todos, categories, addTodo, toggleTodo, deleteTodo } = useTodos();
 
+  console.log(process.env.NEXT_PUBLIC_SERVER_URL);
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
