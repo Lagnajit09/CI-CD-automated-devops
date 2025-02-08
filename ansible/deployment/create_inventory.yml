@@ -1,0 +1,12 @@
+---
+- name: Create Deployment Inventory
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  vars_files:
+    - ../ec2-config/vars/instance_details.yml
+  tasks:
+    - name: Create inventory
+      template:
+        src: ../inventory/temp_inventory_ec2.ini
+        dest: ../inventory/inventory_ec2.ini

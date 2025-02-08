@@ -1,0 +1,86 @@
+---
+- name: Deploy Todo Application with Docker Compose
+  hosts: ubuntu
+  become: yes
+  vars:
+    app_directory: "/opt/todo-app"
+    dockerhub_username: "{{ dockerhub_username | default(omit) }}"
+    dockerhub_password: "{{ dockerhub_password | default(omit) }}"
+    frontend_port: 3000
+    backend_port: 5000
+    server_url: "http://{{ public_ip }}:{{ backend_port }}"
+  vars_files:
+    - ../ec2-config/vars/instance_details.yml
+
+  tasks:
+    - name: Fetch DATABASE_URL from AWS Parameter Store
+      set_fact:
+        db_url: "{{ lookup('amazon.aws.aws_ssm', 'todo_db_url') }}"
+
+    - name: Create .env file
+      template:
+        src: ./templates/env.j2
+        dest: "{{ app_directory }}/.env"
+        mode: '0600'
+      vars:
+        database_url: "{{ db_url }}"
+
+    - name: Pull Docker images
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - lmdev09/cicd-todo-fe:latest
+        - lmdev09/cicd-todo-be:latest
+
+    - name: Create docker-compose.yml
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ app_directory }}/docker-compose.yml"
+
+    - name: Deploy application with Docker Compose
+      command:
+        cmd: docker-compose up -d
+        chdir: "{{ app_directory }}"
+      environment:
+        COMPOSE_PROJECT_NAME: todo-app
+
+    - name: Get frontend container ID
+      command: docker ps -q -f name=todo-app-frontend
+      register: frontend_container
+         
+    - name: Create frontend .env content
+      copy:
+        content: |
+          NEXT_PUBLIC_SERVER_URL= 'http://{{ public_ip }}:{{ backend_port }}'
+          NODE_ENV=production
+          PORT={{ frontend_port }}
+        dest: "{{ app_directory }}/frontend.env"
+        mode: '0600'
+
+    - name: Copy .env file to frontend container
+      shell: |
+        docker exec -i {{ frontend_container.stdout }} sh -c 'cat > /app/.env' < {{ app_directory }}/frontend.env
+
+    - name: Run Next.js build in frontend container
+      command: docker exec -i {{ frontend_container.stdout }} npm run build
+      register: build_output
+
+    - name: Display build output
+      debug:
+        msg: "{{ build_output.stdout_lines }}"
+
+    - name: Restart frontend container
+      command: docker restart {{ frontend_container.stdout }}
+
+    - name: Verify deployment
+      command: docker ps
+      register: docker_containers
+
+    - debug:
+        msg: "{{ docker_containers.stdout_lines }}"
+
+    - name: Clean up temporary env file
+      file:
+        path: "{{ app_directory }}/frontend.env"
+        state: absent 

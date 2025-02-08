@@ -93,6 +93,14 @@
             ports: 443
             cidr_ip: 0.0.0.0/0
             rule_desc: allow HTTPS
+          - proto: tcp
+            ports: 3000
+            cidr_ip: 0.0.0.0/0
+            rule_desc: frontend port
+          - proto: tcp
+            ports: 5000
+            cidr_ip: 0.0.0.0/0
+            rule_desc: backend port
         tags:
           Name: "{{ vpc_name }}-sg"
           Environment: "{{ environment }}"
