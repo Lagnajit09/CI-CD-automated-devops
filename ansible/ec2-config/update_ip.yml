@@ -1,0 +1,52 @@
+---
+- name: Update IP Address in Configuration Files
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    vars_file: "./vars/instance_details.yml"
+    inventory_file: "../inventory/inventory_ec2.ini"
+  vars_files:
+    - ./vars/instance_details.yml
+    - ./vars/aws_vars.yml
+
+  tasks:
+    - name: Get instance information
+      amazon.aws.ec2_instance_info:
+        instance_ids:
+          - "{{ instance_id }}"
+        region: "{{ aws_region }}"
+      register: ec2_info
+
+    - name: Read existing vars file
+      ansible.builtin.slurp:
+        src: "{{ vars_file }}"
+      register: vars_content
+
+    - name: Update vars file with new IP
+      ansible.builtin.copy:
+        content: |
+          ---
+          vpc_id: "{{ (vars_content.content | b64decode | from_yaml).vpc_id }}"
+          public_subnet_id: "{{ (vars_content.content | b64decode | from_yaml).public_subnet_id }}"
+          private_subnet_id: "{{ (vars_content.content | b64decode | from_yaml).private_subnet_id }}"
+          security_group_id: "{{ (vars_content.content | b64decode | from_yaml).security_group_id }}"
+          instance_id: "{{ instance_id }}"
+          public_ip: "{{ ec2_info.instances[0].public_ip_address }}"
+          private_ip: "{{ ec2_info.instances[0].private_ip_address }}"
+          key_file: "{{ (vars_content.content | b64decode | from_yaml).key_file }}"
+          ssh_command: "ssh -i {{ (vars_content.content | b64decode | from_yaml).key_file }} ubuntu@{{ ec2_info.instances[0].public_ip_address }}"
+        dest: "{{ vars_file }}"
+
+    - name: Update inventory file
+      ansible.builtin.copy:
+        content: |
+          [ubuntu]
+          {{ ec2_info.instances[0].public_ip_address }} ansible_user=ubuntu ansible_ssh_private_key_file=~/{{ (vars_content.content | b64decode | from_yaml).key_file }}
+        dest: "{{ inventory_file }}"
+
+    - name: Display updated IP addresses
+      debug:
+        msg:
+          - "New Public IP: {{ ec2_info.instances[0].public_ip_address }}"
+          - "New Private IP: {{ ec2_info.instances[0].private_ip_address }}"

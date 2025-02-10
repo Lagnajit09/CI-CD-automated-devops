@@ -1,0 +1,52 @@
+---
+- name: Deploy Todo Application with Docker Compose
+  hosts: ubuntu
+  become: yes
+  vars:
+    app_directory: "/opt/todo-app"
+    frontend_port: 3000
+    backend_port: 5000
+    server_url: "http://{{ public_ip }}:{{ backend_port }}"
+  vars_files:
+    - ../ec2-config/vars/instance_details.yml
+
+  tasks:
+    - name: Get frontend container ID
+      command: docker ps -q -f name=todo-app-frontend
+      register: frontend_container
+         
+    - name: Create frontend .env content
+      copy:
+        content: |
+          NEXT_PUBLIC_SERVER_URL= 'http://{{ public_ip }}:{{ backend_port }}'
+          NODE_ENV=production
+          PORT={{ frontend_port }}
+        dest: "{{ app_directory }}/frontend.env"
+        mode: '0600'
+
+    - name: Copy .env file to frontend container
+      shell: |
+        docker exec -i {{ frontend_container.stdout }} sh -c 'cat > /app/.env' < {{ app_directory }}/frontend.env
+
+    - name: Run Next.js build in frontend container
+      command: docker exec -i {{ frontend_container.stdout }} npm run build
+      register: build_output
+
+    - name: Display build output
+      debug:
+        msg: "{{ build_output.stdout_lines }}"
+
+    - name: Restart frontend container
+      command: docker restart {{ frontend_container.stdout }}
+
+    - name: Verify deployment
+      command: docker ps
+      register: docker_containers
+
+    - debug:
+        msg: "{{ docker_containers.stdout_lines }}"
+
+    - name: Clean up temporary env file
+      file:
+        path: "{{ app_directory }}/frontend.env"
+        state: absent 
